@@ -14,22 +14,46 @@
       <div class="header-actions"><button id="close">✖</button></div>
     </div>
 
-    <div id="chat" class="chat-body">
-      <div class="messages" id="messages">
-        <div class="welcome">Olá, Eu sou o Klebão<br><small>Por favor, realize o login no chat</small></div>
+    <!-- User chat area -->
+    <div id="userArea">
+      <div id="chat" class="chat-body">
+        <div class="messages" id="messages">
+          <div class="welcome">Olá, Eu sou o Klebão<br><small>Por favor, realize o login no chat</small></div>
+        </div>
+      </div>
+
+      <div class="login-panel" id="loginPanel">
+        <input id="email" placeholder="email@exemplo.com" />
+        <input id="password" type="password" placeholder="senha" />
+        <label class="small"><input type="checkbox" id="remember" /> Manter conectado</label>
+        <button id="loginBtn" class="btn-send">Acessar</button>
+      </div>
+
+      <div class="input-panel" id="inputPanel" style="display:none;">
+        <input id="messageInput" placeholder="Escreva sua mensagem" />
+        <button id="sendBtn" class="btn-send">Enviar</button>
       </div>
     </div>
 
-    <div class="login-panel" id="loginPanel">
-      <input id="email" placeholder="email@exemplo.com" />
-      <input id="password" type="password" placeholder="senha" />
-      <label class="small"><input type="checkbox" id="remember" /> Manter conectado</label>
-      <button id="loginBtn" class="btn-send">Acessar</button>
-    </div>
-
-    <div class="input-panel" id="inputPanel" style="display:none;">
-      <input id="messageInput" placeholder="Escreva sua mensagem" />
-      <button id="sendBtn" class="btn-send">Enviar</button>
+    <!-- Admin panel -->
+    <div id="adminArea" style="display:none;">
+      <div class="admin-grid">
+        <div class="admin-queue">
+          <h3>Fila de atendimentos</h3>
+          <ul id="queueList"></ul>
+        </div>
+        <div class="admin-conversation" id="adminConversation" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <h3 style="margin:0">Conversa</h3>
+            <button id="adminBack" class="btn-send" style="padding:6px 10px">Voltar</button>
+          </div>
+          <div id="adminMessages" class="messages admin-messages"></div>
+          <div class="admin-controls">
+            <input id="adminMessageInput" placeholder="Escreva sua resposta" style="flex:1;padding:8px;border-radius:8px;background:#0e0e0e;color:#fff;border:1px solid rgba(255,255,255,.06)" />
+            <button id="adminSendBtn" class="btn-send">Enviar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="footer-info">Atendimento automático para locadora de veículos — Klebão</div>

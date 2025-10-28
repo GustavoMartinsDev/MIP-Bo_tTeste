@@ -1,16 +1,19 @@
-body{font-family:Inter, Arial, sans-serif;background:#062033;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+body{font-family:Inter,Arial,sans-serif;background:#062033;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
 .chat-container{width:420px;max-width:95vw;height:640px;background:linear-gradient(180deg,#0f1720,#071018);border-radius:12px;color:#fff;box-shadow:0 20px 50px rgba(2,6,23,.7);overflow:hidden;display:flex;flex-direction:column}
-.chat-header{display:flex;align-items:center;padding:16px;background:linear-gradient(90deg,#071827,#0a2b3e);border-bottom:1px solid rgba(255,255,255,.03)}
+.chat-header{display:flex;align-items:center;padding:12px 16px;background:linear-gradient(90deg,#071827,#0a2b3e);border-bottom:1px solid rgba(255,255,255,.03);z-index:5}
 .avatar{width:44px;height:44px;border-radius:50%;background:#2b8ef7;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;margin-right:12px;font-size:18px}
 .title{flex:1;font-weight:700;font-size:16px}
 .header-actions{display:flex;gap:8px}
 .header-actions button{background:#0b84ff;border:none;color:#fff;padding:8px;border-radius:8px;cursor:pointer}
-.chat-body{padding:18px;height:calc(100% - 170px);overflow:auto;background:linear-gradient(180deg,#07121a,#061219);scrollbar-width:thin}
-.chat-body::-webkit-scrollbar{width:10px}
-.chat-body::-webkit-scrollbar-track{background:transparent}
-.chat-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px}
+
+/* User area container to keep chat and input fixed */
+#userArea{display:flex;flex-direction:column;flex:1;overflow:hidden}
+
+/* Chat body area: header outside, messages scroll inside */
+.chat-body{padding:12px 16px;flex:1;overflow:hidden;background:linear-gradient(180deg,#07121a,#061219);display:flex;flex-direction:column}
+.messages{display:flex;flex-direction:column;gap:10px;padding-bottom:24px;overflow:auto;flex:1}
 .welcome{color:#cfe8ff;margin-bottom:8px}
-.messages{display:flex;flex-direction:column;gap:10px}
+/* messages container occupies available space and is scrollable */
 .message{max-width:78%;padding:10px 14px;border-radius:12px;word-wrap:break-word;line-height:1.4;box-shadow:0 6px 18px rgba(2,6,23,.6);opacity:0;transform:translateY(8px);animation:pop .18s ease forwards;white-space:pre-wrap;word-break:break-word}
 @keyframes pop{to{opacity:1;transform:none}}
 .msg-user{background:linear-gradient(180deg,#0b84ff,#0575e6);color:#fff;align-self:flex-end;border-bottom-right-radius:6px}
@@ -21,16 +24,34 @@ body{font-family:Inter, Arial, sans-serif;background:#062033;display:flex;align-
 .typing-dot:nth-child(2){animation-delay:.15s}
 .typing-dot:nth-child(3){animation-delay:.3s}
 @keyframes blink{50%{opacity:1}}
-.login-panel{padding:14px;display:flex;flex-direction:column;gap:10px}
-.login-panel input{padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);color:#fff}
-.input-panel{display:flex;padding:12px;gap:10px;border-top:1px solid rgba(255,255,255,.03);align-items:center}
-.input-panel input{flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);color:#fff}
+
+/* Login panel styling */
+.login-panel{padding:14px;display:flex;flex-direction:column;gap:12px}
+.login-panel input{padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);color:#fff;outline:none}
+.login-panel input::placeholder{color:rgba(255,255,255,.45)}
+.login-panel label{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.75)}
+.login-panel .btn-send{width:100%;padding:12px;border-radius:10px}
+
+/* Input panel fixed visually at bottom inside container */
+.input-panel{display:flex;padding:12px;gap:10px;align-items:center;background:linear-gradient(180deg,rgba(0,0,0,0.0),rgba(0,0,0,0.05));border-top:1px solid rgba(255,255,255,.03);position:relative}
+.input-panel input{flex:1;padding:12px;border-radius:20px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);color:#fff}
 button.btn-send{background:#0b84ff;border:none;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;box-shadow:0 6px 18px rgba(11,132,255,.18)}
 button.btn-send:disabled{opacity:.5;cursor:not-allowed}
 .small{font-size:12px;color:rgba(255,255,255,.6)}
 .footer-info{padding:8px 16px;font-size:12px;color:rgba(255,255,255,.45);text-align:center}
+
+/* Admin area styles */
+#adminArea{display:flex;flex-direction:column;flex:1;overflow:hidden;padding:12px 16px}
+.admin-conversation{flex:1;background:rgba(255,255,255,.02);padding:8px;border-radius:8px;display:flex;flex-direction:column;overflow:hidden;height:100%}
+.admin-messages{flex:1;overflow-y:auto;padding:12px;border-radius:6px;background:linear-gradient(180deg,#06121a,#06121a);display:flex;flex-direction:column;gap:10px}
+.admin-controls{display:flex;gap:8px;margin-top:8px;align-items:center;padding-top:8px}
+.admin-controls input{flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);color:#fff}
+.admin-controls button{padding:10px 14px;border-radius:10px}
+
+/* Priority badge */
 .priority-badge{display:inline-block;padding:6px 8px;border-radius:999px;background:rgba(11,132,255,.12);color:#bfe0ff;font-weight:600;font-size:12px;margin-bottom:8px;border:1px solid rgba(11,132,255,.14)}
 .priority-low{background:rgba(255,255,255,.03);color:#cbd5e1}
 .priority-medium{background:rgba(255,193,7,.12);color:#ffd77a}
 .priority-high{background:rgba(220,38,38,.12);color:#ffb4ab}
+
 @media (max-width:480px){.chat-container{width:95vw;height:90vh}.chat-body{height:calc(100% - 170px)}}

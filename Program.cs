@@ -55,10 +55,17 @@ async void HandleRequest(HttpListenerContext ctx)
 
             var sessionId = Guid.NewGuid().ToString();
             var chamado = new Chamado();
-            var state = new SessionState { Conversa = chamado.novaConversa, LastContext = "root" };
+            var state = new SessionState { Conversa = chamado.novaConversa, LastContext = "root", Email = login.Email };
+
+            // Admin account special
+            if (login.Email == "admin@klebao.com" && login.Password == "admin@123")
+            {
+                state.IsAdmin = true;
+            }
+
             sessions[sessionId] = state;
 
-            await WriteJson(resp, 200, new { sessionId, welcome = chamado.MensagemBoasVindas });
+            await WriteJson(resp, 200, new { sessionId, welcome = chamado.MensagemBoasVindas, isAdmin = state.IsAdmin });
             return;
         }
         else if (path.StartsWith("/api/message") && req.HttpMethod == "POST")
@@ -82,45 +89,222 @@ async void HandleRequest(HttpListenerContext ctx)
 
             var content = messageReq.Content.Trim();
 
+            // If admin is sending to a user via /api/message, disallow here (admin uses admin endpoint)
+            if (state.IsAdmin)
+            {
+                await WriteJson(resp, 403, new { error = "Admin deve usar a área administrativa" });
+                return;
+            }
+
+            // Register user's message
             var userMsg = EnvioMsg.EnviarUsuario(messageReq.Content);
             state.Conversa.AdicionarMensagem(userMsg);
 
-            Mensagem resposta;
+            Mensagem resposta = null;
+            bool queued = false; // indicates session was queued for human
 
             var lower = content.ToLower();
 
-            if (lower == "1" || lower == "ajuda")
+            // PRIORITY/CONTEXT-SPECIFIC HANDLING FIRST to avoid conflicts with menu numbers
+            if (state.LastContext == "awaiting_priority")
             {
-                resposta = Chamado.GerarMensagemAjuda();
-                state.LastContext = "ajuda";
-                state.Conversa.AdicionarMensagem(resposta);
+                // Validate priority
+                var p = TestePIM.Utils.ParsePriority(lower);
+                if (p == TestePIM.Priority.Invalid)
+                {
+                    resposta = new Mensagem { Remetente = "Klebão", Conteudo = "Prioridade inválida. Digite: 1 para Alta, 2 para Média, 3 para Baixa." };
+                    state.Conversa.AdicionarMensagem(resposta);
+                }
+                else if (p == TestePIM.Priority.Low)
+                {
+                    // Low -> IA (use the stored TempDetail)
+                    var iaResp = EnvioMsg.EnviarBot(state.TempDetail ?? messageReq.Content);
+                    state.Conversa.AdicionarMensagem(iaResp);
+                    resposta = iaResp;
+                    state.LastContext = "root";
+                    // clear temp detail after handling
+                    state.TempDetail = null;
+                }
+                else
+                {
+                    // Medium or High -> enviar para fila humana, keep TempDetail for agent
+                    state.IsWaitingHuman = true;
+                    state.Priority = p;
+                    state.LastContext = "waiting_human";
+                    queued = true;
+                    resposta = new Mensagem { Remetente = "Klebão", Conteudo = "Obrigado — sua solicitação foi encaminhada para atendimento humano. Aguarde que um atendente irá falar com você em breve." };
+                    state.Conversa.AdicionarMensagem(resposta);
+                }
+
+                // Return result
+                if (resposta != null)
+                {
+                    await WriteJson(resp, 200, new { message = resposta, queued });
+                }
+                else
+                {
+                    await WriteJson(resp, 200, new { ok = true, queued });
+                }
+                return;
             }
-            else if (lower == "2" || lower == "faq")
+
+            // If we were asking for details specifically
+            if (state.LastContext == "awaiting_details")
             {
-                resposta = Chamado.GerarMensagemFAQ();
-                state.LastContext = "faq";
+                // Save detail and ask for priority - do not interpret numbers here as menu options
+                state.TempDetail = messageReq.Content;
+                resposta = new Mensagem { Remetente = "Klebão", Conteudo = "Por favor, informe a prioridade do atendimento: 1 - Alta, 2 - Média, 3 - Baixa" };
+                state.LastContext = "awaiting_priority";
                 state.Conversa.AdicionarMensagem(resposta);
+
+                await WriteJson(resp, 200, new { message = resposta, queued = false });
+                return;
             }
-            else if (state.LastContext == "faq" && int.TryParse(lower, out _))
+
+            // If we are inside FAQ expecting a number, handle that
+            if (state.LastContext == "faq" && int.TryParse(lower, out _))
             {
                 resposta = state.Conversa.GerarRespostaFaq(lower);
                 state.LastContext = "root";
                 state.Conversa.AdicionarMensagem(resposta);
+
+                await WriteJson(resp, 200, new { message = resposta, queued = false });
+                return;
             }
-            else if (state.LastContext == "ajuda")
+
+            // MENU and generic handling (only when not in a special awaiting state)
+            if (lower == "1" || lower == "ajuda")
             {
-                resposta = state.Conversa.GerarRespostaAjuda(messageReq.Content);
+                resposta = Chamado.GerarMensagemAjuda();
+                state.LastContext = "awaiting_details";
+                state.Conversa.AdicionarMensagem(resposta);
+
+                await WriteJson(resp, 200, new { message = resposta, queued = false });
+                return;
+            }
+
+            if (lower == "2" || lower == "faq")
+            {
+                resposta = Chamado.GerarMensagemFAQ();
+                state.LastContext = "faq";
+                state.Conversa.AdicionarMensagem(resposta);
+
+                await WriteJson(resp, 200, new { message = resposta, queued = false });
+                return;
+            }
+
+            // Generic input when in root: decide if it's a help request or general query
+            var classification = Prioridade.ClassificarPrioridade(lower);
+
+            if (classification == "Não classificada")
+            {
+                // Not a help/issue we recognize -> answer by IA immediately
+                var iaResp = EnvioMsg.EnviarBot(messageReq.Content);
+                resposta = iaResp;
+                state.Conversa.AdicionarMensagem(resposta);
                 state.LastContext = "root";
-                state.Conversa.AddicionarMensagemIfNotPresent(resposta);
+
+                await WriteJson(resp, 200, new { message = resposta, queued = false });
+                return;
             }
             else
             {
-                resposta = state.Conversa.GerarResposta(lower);
-                state.LastContext = "root";
-                state.Conversa.AddicionarMensagemIfNotPresent(resposta);
+                // Recognized as an issue: ask for priority before queuing
+                state.TempDetail = messageReq.Content;
+                resposta = new Mensagem { Remetente = "Klebão", Conteudo = "Detectei que você precisa de ajuda. Por favor, informe a prioridade do atendimento: 1 - Alta, 2 - Média, 3 - Baixa" };
+                state.LastContext = "awaiting_priority";
+                state.Conversa.AdicionarMensagem(resposta);
+
+                await WriteJson(resp, 200, new { message = resposta, queued = false });
+                return;
+            }
+        }
+        else if (path.StartsWith("/api/messages") && req.HttpMethod == "GET")
+        {
+            var q = req.QueryString;
+            var sessionId = q["sessionId"];
+            if (string.IsNullOrWhiteSpace(sessionId) || !sessions.TryGetValue(sessionId, out var state))
+            {
+                await WriteJson(resp, 400, new { error = "sessionId inválido" });
+                return;
             }
 
-            await WriteJson(resp, 200, resposta);
+            // Return messages plus waiting/human info
+            await WriteJson(resp, 200, new { messages = state.Conversa.Mensagens, waitingHuman = state.IsWaitingHuman, assignedAgent = state.AssignedAgent });
+            return;
+        }
+        else if (path.StartsWith("/api/admin/queue") && req.HttpMethod == "GET")
+        {
+            var q = req.QueryString;
+            var adminSessionId = q["sessionId"];
+            if (string.IsNullOrWhiteSpace(adminSessionId) || !sessions.TryGetValue(adminSessionId, out var adminState) || !adminState.IsAdmin)
+            {
+                await WriteJson(resp, 403, new { error = "Acesso negado" });
+                return;
+            }
+
+            var list = sessions.Where(kv => kv.Value.IsWaitingHuman).Select(kv => new {
+                sessionId = kv.Key,
+                email = kv.Value.Email,
+                lastMessage = kv.Value.Conversa.Mensagens.LastOrDefault()?.Conteudo,
+                priority = kv.Value.Priority.ToString()
+            }).ToList();
+
+            await WriteJson(resp, 200, list);
+            return;
+        }
+        else if (path.StartsWith("/api/admin/conversation") && req.HttpMethod == "GET")
+        {
+            var q = req.QueryString;
+            var adminSessionId = q["adminSessionId"];
+            var target = q["targetSessionId"];
+            if (string.IsNullOrWhiteSpace(adminSessionId) || !sessions.TryGetValue(adminSessionId, out var adminState) || !adminState.IsAdmin)
+            {
+                await WriteJson(resp, 403, new { error = "Acesso negado" });
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(target) || !sessions.TryGetValue(target, out var targetState))
+            {
+                await WriteJson(resp, 400, new { error = "targetSessionId inválido" });
+                return;
+            }
+
+            await WriteJson(resp, 200, targetState.Conversa.Mensagens);
+            return;
+        }
+        else if (path.StartsWith("/api/admin/send") && req.HttpMethod == "POST")
+        {
+            using var sr = new StreamReader(req.InputStream, req.ContentEncoding);
+            var body = await sr.ReadToEndAsync();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var sendReq = JsonSerializer.Deserialize<AdminSendRequest>(body, options);
+
+            if (sendReq == null || string.IsNullOrWhiteSpace(sendReq.AdminSessionId) || string.IsNullOrWhiteSpace(sendReq.TargetSessionId) || string.IsNullOrWhiteSpace(sendReq.Content))
+            {
+                await WriteJson(resp, 400, new { error = "Parâmetros inválidos" });
+                return;
+            }
+
+            if (!sessions.TryGetValue(sendReq.AdminSessionId, out var adminState) || !adminState.IsAdmin)
+            {
+                await WriteJson(resp, 403, new { error = "Acesso negado" });
+                return;
+            }
+
+            if (!sessions.TryGetValue(sendReq.TargetSessionId, out var targetState))
+            {
+                await WriteJson(resp, 400, new { error = "Target não encontrado" });
+                return;
+            }
+
+            var msg = new Mensagem { Remetente = "Atendente", Conteudo = sendReq.Content };
+            targetState.Conversa.AdicionarMensagem(msg);
+            // Marca que já há um atendente ativo
+            targetState.IsWaitingHuman = false;
+            targetState.AssignedAgent = adminState.Email;
+
+            await WriteJson(resp, 200, new { ok = true });
             return;
         }
         else
@@ -238,24 +422,4 @@ Task WriteString(HttpListenerResponse resp, string text)
     resp.ContentType = "text/plain; charset=utf-8";
     resp.ContentLength64 = bytes.Length;
     return resp.OutputStream.WriteAsync(bytes, 0, bytes.Length);
-}
-
-// Modelos auxiliares para API e estado de sessão
-public record LoginRequest(string Email, string Password);
-public record MessageRequest(string SessionId, string Content);
-
-public class SessionState
-{
-    public Conversa Conversa { get; set; } = new Conversa();
-    public string LastContext { get; set; } = "root";
-}
-
-// Extensões utilitárias para não duplicar mensagens
-static class ConversaExtensions
-{
-    public static void AddicionarMensagemIfNotPresent(this Conversa conversa, Mensagem msg)
-    {
-        if (!conversa.Mensagens.Any(m => m.Conteudo == msg.Conteudo))
-            conversa.AdicionarMensagem(msg);
-    }
 }
