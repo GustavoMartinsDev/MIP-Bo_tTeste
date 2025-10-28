@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Klebão Chat - Locadora</title>
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <div class="avatar">K</div>
+      <div class="title">Klebão</div>
+      <div class="header-actions"><button id="close">✖</button></div>
+    </div>
+
+    <div id="chat" class="chat-body">
+      <div class="messages" id="messages">
+        <div class="welcome">Olá, Eu sou o Klebão<br><small>Por favor, realize o login no chat</small></div>
+      </div>
+    </div>
+
+    <div class="login-panel" id="loginPanel">
+      <input id="email" placeholder="email@exemplo.com" />
+      <input id="password" type="password" placeholder="senha" />
+      <label class="small"><input type="checkbox" id="remember" /> Manter conectado</label>
+      <button id="loginBtn" class="btn-send">Acessar</button>
+    </div>
+
+    <div class="input-panel" id="inputPanel" style="display:none;">
+      <input id="messageInput" placeholder="Escreva sua mensagem" />
+      <button id="sendBtn" class="btn-send">Enviar</button>
+    </div>
+
+    <div class="footer-info">Atendimento automático para locadora de veículos — Klebão</div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
