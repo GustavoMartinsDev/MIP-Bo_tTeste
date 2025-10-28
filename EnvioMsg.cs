@@ -12,7 +12,7 @@ namespace TestePIM
         {
             Mensagem msg = new()
             {
-                Remetente = "Usuário",
+                Remetente = "Usuario",
                 Conteudo = conteudo,
                 // Prioridade não será mais usada
                 PrioridadeMsg = null
@@ -29,7 +29,7 @@ namespace TestePIM
 
             Mensagem msgBot = new()
             {
-                Remetente = "Klebão",
+                Remetente = "Klebao",
                 // Conteúdo será exatamente o que a IA retornou
                 Conteudo = iaResposta,
                 PrioridadeMsg = null
@@ -160,7 +160,7 @@ namespace TestePIM
                 {
                     model = "gpt-3.5-turbo",
                     messages = new[] {
-                        new { role = "system", content = "Você é um assistente para uma locadora de veículos. Responda de forma curta, objetiva e em português." },
+                        new { role = "system", content = "Voce e um assistente para uma locadora de veiculos. Responda de forma curta, objetiva e em portugues." },
                         new { role = "user", content = prompt }
                     },
                     max_tokens = 600,

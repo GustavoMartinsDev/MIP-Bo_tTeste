@@ -59,19 +59,19 @@ function createMessageEl(text, cls, sender, time){
 
 function appendUserMessage(text){
   const now = formatTime(new Date().toISOString());
-  const el = createMessageEl(text, 'msg-user', 'Usuário', now);
+  const el = createMessageEl(text, 'msg-user', 'Usuario', now);
   messagesEl.appendChild(el);
   chatBody.scrollTop = chatBody.scrollHeight;
 }
 function appendBotMessage(text){
   const now = formatTime(new Date().toISOString());
-  const el = createMessageEl(text, 'msg-bot', 'Klebão', now);
+  const el = createMessageEl(text, 'msg-bot', 'Klebao', now);
   messagesEl.appendChild(el);
   chatBody.scrollTop = chatBody.scrollHeight;
 }
 
 function appendAdminMessage(text, sender, time){
-  const isUser = sender === 'Usuário';
+  const isUser = sender === 'Usuario' || sender === 'Usuário';
   const el = createMessageEl(text, isUser ? 'msg-user' : 'msg-bot', sender, time);
   adminMessages.appendChild(el);
   adminMessages.scrollTop = adminMessages.scrollHeight;
@@ -113,7 +113,7 @@ async function pollMessages(){
   messagesEl.innerHTML = '';
   (data.messages || []).forEach(m => {
     const nm = normalizeMessage(m);
-    const cls = nm.from === 'Usuário' ? 'msg-user' : 'msg-bot';
+    const cls = nm.from === 'Usuario' || nm.from === 'Usuário' ? 'msg-user' : 'msg-bot';
     const el = createMessageEl(nm.text, cls, nm.from, nm.time);
     messagesEl.appendChild(el);
   });
@@ -148,17 +148,17 @@ async function pollAdminQueue(adminSessionId){
     titulo.className = 'queue-titulo';
     titulo.textContent = item.titulo || 'Sem título';
     
-    const prioridade = document.createElement('div');
-    prioridade.className = 'queue-prioridade';
-    prioridade.textContent = `Prioridade: ${item.priority}`;
+    const prioritized = document.createElement('div');
+    prioritized.className = 'queue-prioridade';
+    prioritized.textContent = `Prioridade: ${item.priority}`;
     
     // Add priority badge class for styling
     const priorityClass = item.priority === 'Alta' ? 'priority-high' : 
                          item.priority === 'Média' ? 'priority-medium' : 'priority-low';
-    prioridade.classList.add(priorityClass);
+    prioritized.classList.add(priorityClass);
     
     li.appendChild(titulo);
-    li.appendChild(prioridade);
+    li.appendChild(prioritized);
     li.dataset.sessionId = item.sessionId;
     li.style.cursor = 'pointer';
     li.addEventListener('click', ()=> openConversation(adminSessionId, item.sessionId));
@@ -226,6 +226,27 @@ async function adminSend(adminSessionId){
   }
 }
 
+async function adminResolve(adminSessionId){
+  const target = adminArea.dataset.currentTarget;
+  if(!target) return alert('Selecione uma conversa');
+  
+  if(!confirm('Marcar este chamado como resolvido? O chat do usuário será resetado.')) return;
+  
+  const body = { adminSessionId, targetSessionId: target, content: '' };
+  const resp = await fetch('/api/admin/resolve', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  
+  if(resp.ok){
+    alert('Chamado marcado como resolvido!');
+    // Go back to queue
+    if(adminConvInterval) clearInterval(adminConvInterval);
+    adminConversation.style.display = 'none';
+    document.querySelector('.admin-queue').style.display = 'block';
+    adminArea.dataset.currentTarget = '';
+    // Reload queue
+    pollAdminQueue(adminSessionId);
+  }
+}
+
 // Login
 const loginBtn = document.getElementById('loginBtn');
 if(loginBtn) loginBtn.addEventListener('click', async () => {
@@ -250,6 +271,7 @@ if(loginBtn) loginBtn.addEventListener('click', async () => {
     pollAdminQueue(sessionId);
     adminQueueInterval = setInterval(()=> pollAdminQueue(sessionId), 2000);
     document.getElementById('adminSendBtn').addEventListener('click', ()=> adminSend(sessionId));
+    document.getElementById('adminResolve').addEventListener('click', ()=> adminResolve(sessionId));
     return;
   }
 
@@ -276,8 +298,21 @@ if(sendBtn) sendBtn.addEventListener('click', async ()=>{
   if(!resp.ok){ appendBotMessage('Erro na comunicação com o servidor'); return; }
   const result = await resp.json();
 
+  // If in human queue, just acknowledge
+  if(result.inHumanQueue){
+    // Don't show anything, message is stored
+    return;
+  }
+
+  // Check if there are multiple messages (like FAQ response + menu)
+  if(result.messages && Array.isArray(result.messages)){
+    result.messages.forEach(msg => {
+      const nm = normalizeMessage(msg);
+      appendBotMessage(nm.text);
+    });
+  }
   // server returns { message, queued } when appropriate
-  if(result.message){
+  else if(result.message){
     const msg = result.message;
     const nm = normalizeMessage(msg);
     appendBotMessage(nm.text);
@@ -300,6 +335,12 @@ if(adminBack) adminBack.addEventListener('click', ()=>{
   adminConversation.style.display = 'none';
   document.querySelector('.admin-queue').style.display = 'block';
   adminArea.dataset.currentTarget = '';
+  
+  // Reload queue to reflect any changes
+  const adminSessionId = sessionId; // sessionId is the admin's session
+  if(adminSessionId) {
+    pollAdminQueue(adminSessionId);
+  }
 });
 
 // Close button resets to login for user
@@ -308,7 +349,7 @@ if(closeBtn) closeBtn.addEventListener('click', ()=>{
   userArea.querySelector('#chat').style.display = 'none';
   loginPanel.style.display = 'block';
   inputPanel.style.display = 'none';
-  messagesEl.innerHTML = '<div class="welcome">Olá, Eu sou o Klebão<br><small>Por favor, realize o login no chat</small></div>';
+  messagesEl.innerHTML = '<div class="welcome">Ola, Eu sou o Klebao<br><small>Por favor, realize o login no chat</small></div>';
   sessionId = null;
   stopUserPolling();
 });

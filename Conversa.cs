@@ -27,8 +27,8 @@ namespace TestePIM
                 {
                     Mensagem msgBot = new Mensagem
                     {
-                        Remetente = "Klebão",
-                        Conteudo = "Não deu pra entender oque você disse. Escolha uma das opções que eu apresentei, assim eu posso te ajudar melhor!"
+                        Remetente = "Klebao",
+                        Conteudo = "Nao deu pra entender oque voce disse. Escolha uma das opcoes que eu apresentei, assim eu posso te ajudar melhor!"
                     };
 
                     Mensagens.Add(msgBot);
@@ -48,7 +48,7 @@ namespace TestePIM
         {
             Mensagem msgBot = new Mensagem
             {
-                Remetente = "Klebão",
+                Remetente = "Klebao",
                 Conteudo = EnvioMsg.EnviarBot(conteudoUser).Conteudo
             };
             Mensagens.Add(msgBot);
@@ -61,8 +61,8 @@ namespace TestePIM
             {
                 Mensagem msgBot = new Mensagem
                 {
-                    Remetente = "Klebão",
-                    Conteudo = "Para alugar um veículo, você precisa apresentar CNH válida, documento de identidade e cartão de crédito em seu nome para caução.\n\nAgora, vou voltar pra primeira mensagem, pra caso você queira mais alguma ajuda!"
+                    Remetente = "Klebao",
+                    Conteudo = "Para alugar um veiculo, voce precisa apresentar CNH valida, documento de identidade e cartao de credito em seu nome para caucao.\n\nAgora, vou voltar pra primeira mensagem, pra caso voce queira mais alguma ajuda!"
                 };
 
                 return msgBot;
@@ -71,8 +71,8 @@ namespace TestePIM
             {
                 Mensagem msgBot = new Mensagem
                 {
-                    Remetente = "Klebão",
-                    Conteudo = "Não. O cartão de crédito é obrigatório para garantir a pré-autorização (caução), que cobre possíveis danos ou multas durante o período de locação.\n\nAgora, vou voltar pra primeira mensagem, pra caso você queira mais alguma ajuda!"
+                    Remetente = "Klebao",
+                    Conteudo = "Nao. O cartao de credito e obrigatorio para garantir a pre-autorizacao (caucao), que cobre possiveis danos ou multas durante o periodo de locacao.\n\nAgora, vou voltar pra primeira mensagem, pra caso voce queira mais alguma ajuda!"
                 };
 
                 return msgBot;
@@ -81,57 +81,89 @@ namespace TestePIM
             {
                 Mensagem msgBot = new Mensagem
                 {
-                    Remetente = "Klebão",
-                    Conteudo = "A idade mínima é de 21 anos, com pelo menos 2 anos de habilitação (CNH). Algumas categorias de veículos exigem idade superior.\n\nAgora, vou voltar pra primeira mensagem, pra caso você queira mais alguma ajuda!"
+                    Remetente = "Klebao",
+                    Conteudo = "A idade minima e de 21 anos, com pelo menos 2 anos de habilitacao (CNH). Algumas categorias de veiculos exigem idade superior.\n\nAgora, vou voltar pra primeira mensagem, pra caso voce queira mais alguma ajuda!"
                 };
 
                 return msgBot;
             }
             else if (conteudoUser == "4")
             {
-                Mensagem msgBot = new Mensagem { Remetente = "Klebão", Conteudo = "A caução é um valor bloqueado no cartão de crédito durante o aluguel.Ela não é cobrada, apenas reservada e liberada após a devolução do carro, caso não haja pendências.\n\nAgora, vou voltar pra primeira mensagem, pra caso você queira mais alguma ajuda!" };
+                Mensagem msgBot = new Mensagem 
+                { 
+                    Remetente = "Klebao", 
+                    Conteudo = "A caucao e um valor bloqueado no cartao de credito durante o aluguel. Ela nao e cobrada, apenas reservada e liberada apos a devolucao do carro, caso nao haja pendencias.\n\nAgora, vou voltar pra primeira mensagem, pra caso voce queira mais alguma ajuda!" 
+                };
 
                 return msgBot;
             }
             else if (conteudoUser == "5")
             {
-                Mensagem msgBot = new Mensagem { Remetente = "Klebão", Conteudo = "Sim! É possível devolver o carro em outra unidade da locadora, mas pode haver uma taxa adicional. O valor depende da distância entre as filiais.\n\nAgora, vou voltar pra primeira mensagem, pra caso você queira mais alguma ajuda!" };
+                Mensagem msgBot = new Mensagem 
+                { 
+                    Remetente = "Klebao", 
+                    Conteudo = "Sim! E possivel devolver o carro em outra unidade da locadora, mas pode haver uma taxa adicional. O valor depende da distancia entre as filiais.\n\nAgora, vou voltar pra primeira mensagem, pra caso voce queira mais alguma ajuda!" 
+                };
 
                 return msgBot;
             }
             else if (conteudoUser == "6")
             {
-                Mensagem msgBot = new Mensagem { Remetente = "Klebão", Conteudo = "Entre em contato imediatamente com o suporte 24h da locadora. O número está no contrato e no adesivo colado no para-brisa. Não tente consertar o carro por conta própria.\n\nAgora, vou voltar pra primeira mensagem, pra caso você queira mais alguma ajuda!" }   ;
+                Mensagem msgBot = new Mensagem 
+                { 
+                    Remetente = "Klebao", 
+                    Conteudo = "Entre em contato imediatamente com o suporte 24h da locadora. O numero esta no contrato e no adesivo colado no para-brisa. Nao tente consertar o carro por conta propria.\n\nAgora, vou voltar pra primeira mensagem, pra caso voce queira mais alguma ajuda!" 
+                };
 
                 return msgBot;
             }
             else if (conteudoUser == "7")
             {
-                    Mensagem msgBot = new Mensagem { Remetente = "Klebão", Conteudo = "Sim, desde que o motorista adicional também apresente CNH válida. É cobrada uma taxa extra por condutor adicional.\n\nAgora, vou voltar pra primeira mensagem, pra caso você queira mais alguma ajuda!" };
+                Mensagem msgBot = new Mensagem 
+                { 
+                    Remetente = "Klebao", 
+                    Conteudo = "Sim, desde que o motorista adicional tambem apresente CNH valida. E cobrada uma taxa extra por condutor adicional.\n\nAgora, vou voltar pra primeira mensagem, pra caso voce queira mais alguma ajuda!" 
+                };
 
                 return msgBot;
             }
             else if (conteudoUser == "8")
             {
-                Mensagem msgBot = new Mensagem { Remetente = "Klebão", Conteudo = "Depende do plano contratado. Oferecemos tanto quilometragem livre, quanto planos com limite diário de quilômetros (com custo extra por km excedente).\n\nAgora, vou voltar pra primeira mensagem, pra caso você queira mais alguma ajuda!" };
+                Mensagem msgBot = new Mensagem 
+                { 
+                    Remetente = "Klebao", 
+                    Conteudo = "Depende do plano contratado. Oferecemos tanto quilometragem livre, quanto planos com limite diario de quilometros (com custo extra por km excedente).\n\nAgora, vou voltar pra primeira mensagem, pra caso voce queira mais alguma ajuda!" 
+                };
 
                 return msgBot;
             }
             else if (conteudoUser == "9")
             {
-                Mensagem msgBot = new Mensagem { Remetente = "Klebão", Conteudo = "Aceitamos cartões de crédito e débito das principais bandeiras.Pagamentos em dinheiro são aceitos apenas para valores de diárias, não para caução.\n\nAgora, vou voltar pra primeira mensagem, pra caso você queira mais alguma ajuda!" };
+                Mensagem msgBot = new Mensagem 
+                { 
+                    Remetente = "Klebao", 
+                    Conteudo = "Aceitamos cartoes de credito e debito das principais bandeiras. Pagamentos em dinheiro sao aceitos apenas para valores de diarias, nao para caucao.\n\nAgora, vou voltar pra primeira mensagem, pra caso voce queira mais alguma ajuda!" 
+                };
 
                 return msgBot;
             }
             else if (conteudoUser == "10")
             {
-                Mensagem msgBot = new Mensagem { Remetente = "Klebão", Conteudo = "Sim! Basta entrar em contato com a locadora antes do fim do contrato.O valor será ajustado conforme a nova data de devolução e disponibilidade do veículo.\n\nAgora, vou voltar pra primeira mensagem, pra caso você queira mais alguma ajuda!" };
+                Mensagem msgBot = new Mensagem 
+                { 
+                    Remetente = "Klebao", 
+                    Conteudo = "Sim! Basta entrar em contato com a locadora antes do fim do contrato. O valor sera ajustado conforme a nova data de devolucao e disponibilidade do veiculo.\n\nAgora, vou voltar pra primeira mensagem, pra caso voce queira mais alguma ajuda!" 
+                };
 
                 return msgBot;
             }
             else
             {
-                Mensagem msgBot = new Mensagem { Remetente = "Klebão", Conteudo = "Poxa, eu só consigo te ajudar com as perguntas que eu mostrei pra você. Vamos fazer assim, vou voltar pra primeira mensagem, e aí você seleciona a opção de 'Ajuda' pra me contar melhor do que você precisa.\n" };
+                Mensagem msgBot = new Mensagem 
+                { 
+                    Remetente = "Klebao", 
+                    Conteudo = "Poxa, eu so consigo te ajudar com as perguntas que eu mostrei pra voce. Vamos fazer assim, vou voltar pra primeira mensagem, e ai voce seleciona a opcao de 'Ajuda' pra me contar melhor do que voce precisa.\n" 
+                };
 
                 return msgBot;
             }

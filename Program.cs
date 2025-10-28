@@ -105,6 +105,14 @@ async void HandleRequest(HttpListenerContext ctx)
 
             var lower = content.ToLower();
 
+            // If user is in human assistance (waiting or assigned), don't process, just store message
+            if (state.IsWaitingHuman || !string.IsNullOrEmpty(state.AssignedAgent))
+            {
+                // Just acknowledge, don't send to IA
+                await WriteJson(resp, 200, new { ok = true, inHumanQueue = true });
+                return;
+            }
+
             // PRIORITY/CONTEXT-SPECIFIC HANDLING FIRST to avoid conflicts with menu numbers
             if (state.LastContext == "awaiting_priority")
             {
@@ -112,7 +120,7 @@ async void HandleRequest(HttpListenerContext ctx)
                 var p = TestePIM.Utils.ParsePriority(lower);
                 if (p == TestePIM.Priority.Invalid)
                 {
-                    resposta = new Mensagem { Remetente = "Klebão", Conteudo = "Prioridade inválida. Digite: 1 para Alta, 2 para Média, 3 para Baixa." };
+                    resposta = new Mensagem { Remetente = "Klebao", Conteudo = "Prioridade invalida. Digite: 1 para Alta, 2 para Media, 3 para Baixa." };
                     state.Conversa.AdicionarMensagem(resposta);
                 }
                 else if (p == TestePIM.Priority.Low)
@@ -133,7 +141,7 @@ async void HandleRequest(HttpListenerContext ctx)
                     state.ChamadoTitulo = state.TempDetail?.Length > 50 ? state.TempDetail.Substring(0, 50) + "..." : state.TempDetail;
                     state.LastContext = "waiting_human";
                     queued = true;
-                    resposta = new Mensagem { Remetente = "Klebão", Conteudo = "Obrigado — sua solicitação foi encaminhada para atendimento humano. Aguarde que um atendente irá falar com você em breve." };
+                    resposta = new Mensagem { Remetente = "Klebao", Conteudo = "Obrigado - sua solicitacao foi encaminhada para atendimento humano. Aguarde que um atendente ira falar com voce em breve." };
                     state.Conversa.AdicionarMensagem(resposta);
                 }
 
@@ -154,7 +162,7 @@ async void HandleRequest(HttpListenerContext ctx)
             {
                 // Save detail and ask for priority - do not interpret numbers here as menu options
                 state.TempDetail = messageReq.Content;
-                resposta = new Mensagem { Remetente = "Klebão", Conteudo = "Por favor, informe a prioridade do atendimento: 1 - Alta, 2 - Média, 3 - Baixa" };
+                resposta = new Mensagem { Remetente = "Klebao", Conteudo = "Por favor, informe a prioridade do atendimento: 1 - Alta, 2 - Media, 3 - Baixa" };
                 state.LastContext = "awaiting_priority";
                 state.Conversa.AdicionarMensagem(resposta);
 
@@ -166,10 +174,18 @@ async void HandleRequest(HttpListenerContext ctx)
             if (state.LastContext == "faq" && int.TryParse(lower, out _))
             {
                 resposta = state.Conversa.GerarRespostaFaq(lower);
-                state.LastContext = "root";
+                state.LastContext = "root"; // Volta ao contexto root após responder FAQ
                 state.Conversa.AdicionarMensagem(resposta);
 
-                await WriteJson(resp, 200, new { message = resposta, queued = false });
+                // Also add the welcome message again so user can choose menu options
+                var welcomeAgain = new Mensagem 
+                { 
+                    Remetente = "Klebao", 
+                    Conteudo = "Me diz ai do que voce precisa:\n\n1 - Ajuda\n2 - FAQ (Perguntas Frequentes)\n0 - Sair" 
+                };
+                state.Conversa.AdicionarMensagem(welcomeAgain);
+
+                await WriteJson(resp, 200, new { messages = new[] { resposta, welcomeAgain }, queued = false });
                 return;
             }
 
@@ -212,7 +228,7 @@ async void HandleRequest(HttpListenerContext ctx)
             {
                 // Recognized as an issue: ask for priority before queuing
                 state.TempDetail = messageReq.Content;
-                resposta = new Mensagem { Remetente = "Klebão", Conteudo = "Detectei que você precisa de ajuda. Por favor, informe a prioridade do atendimento: 1 - Alta, 2 - Média, 3 - Baixa" };
+                resposta = new Mensagem { Remetente = "Klebao", Conteudo = "Detectei que voce precisa de ajuda. Por favor, informe a prioridade do atendimento: 1 - Alta, 2 - Media, 3 - Baixa" };
                 state.LastContext = "awaiting_priority";
                 state.Conversa.AdicionarMensagem(resposta);
 
@@ -244,7 +260,11 @@ async void HandleRequest(HttpListenerContext ctx)
                 return;
             }
 
-            var list = sessions.Where(kv => kv.Value.IsWaitingHuman).Select(kv => new {
+            // Only show users that are still waiting for human (not assigned or still in queue)
+            var list = sessions.Where(kv => 
+                kv.Value.IsWaitingHuman && 
+                (kv.Value.Priority == Priority.High || kv.Value.Priority == Priority.Medium)
+            ).Select(kv => new {
                 sessionId = kv.Key,
                 email = kv.Value.Email,
                 titulo = kv.Value.ChamadoTitulo ?? (kv.Value.TempDetail?.Length > 50 ? kv.Value.TempDetail.Substring(0, 50) + "..." : kv.Value.TempDetail ?? "Sem título"),
@@ -302,11 +322,64 @@ async void HandleRequest(HttpListenerContext ctx)
 
             var msg = new Mensagem { Remetente = "Atendente", Conteudo = sendReq.Content };
             targetState.Conversa.AdicionarMensagem(msg);
-            // Marca que já há um atendente ativo
-            targetState.IsWaitingHuman = false;
-            targetState.AssignedAgent = adminState.Email;
+            
+            // Only mark as not waiting for human if this is the first admin message (assignment)
+            // Keep IsWaitingHuman true so it stays in queue until resolved
+            if (string.IsNullOrEmpty(targetState.AssignedAgent))
+            {
+                targetState.AssignedAgent = adminState.Email;
+            }
 
             await WriteJson(resp, 200, new { ok = true });
+            return;
+        }
+        else if (path.StartsWith("/api/admin/resolve") && req.HttpMethod == "POST")
+        {
+            using var sr = new StreamReader(req.InputStream, req.ContentEncoding);
+            var body = await sr.ReadToEndAsync();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var resolveReq = JsonSerializer.Deserialize<AdminSendRequest>(body, options);
+
+            if (resolveReq == null || string.IsNullOrWhiteSpace(resolveReq.AdminSessionId) || string.IsNullOrWhiteSpace(resolveReq.TargetSessionId))
+            {
+                await WriteJson(resp, 400, new { error = "Parâmetros inválidos" });
+                return;
+            }
+
+            if (!sessions.TryGetValue(resolveReq.AdminSessionId, out var adminState) || !adminState.IsAdmin)
+            {
+                await WriteJson(resp, 403, new { error = "Acesso negado" });
+                return;
+            }
+
+            if (!sessions.TryGetValue(resolveReq.TargetSessionId, out var targetState))
+            {
+                await WriteJson(resp, 400, new { error = "Target não encontrado" });
+                return;
+            }
+
+            // Send resolution message to user
+            var resolutionMsg = new Mensagem 
+            { 
+                Remetente = "Atendente", 
+                Conteudo = "Seu chamado foi marcado como resolvido. Obrigado por utilizar nossos servicos!" 
+            };
+            targetState.Conversa.AdicionarMensagem(resolutionMsg);
+
+            // Wait a bit before resetting so user can see the message
+            await Task.Delay(1000);
+
+            // Reset user state completely
+            var chamado = new Chamado();
+            targetState.Conversa = chamado.novaConversa;
+            targetState.LastContext = "root";
+            targetState.IsWaitingHuman = false;
+            targetState.Priority = Priority.Invalid;
+            targetState.TempDetail = null;
+            targetState.AssignedAgent = null;
+            targetState.ChamadoTitulo = null;
+
+            await WriteJson(resp, 200, new { ok = true, resolved = true });
             return;
         }
         else
@@ -409,7 +482,11 @@ string GetContentType(string ext)
 
 Task WriteJson(HttpListenerResponse resp, int status, object obj)
 {
-    var options = new JsonSerializerOptions { PropertyNamingPolicy = null };
+    var options = new JsonSerializerOptions 
+    { 
+        PropertyNamingPolicy = null,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
     var json = JsonSerializer.Serialize(obj, options);
     resp.StatusCode = status;
     resp.ContentType = "application/json; charset=utf-8";

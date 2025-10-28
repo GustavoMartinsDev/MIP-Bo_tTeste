@@ -1,16 +1,17 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Klebão Chat - Locadora</title>
+  <title>Klebao Chat - Locadora</title>
   <link rel="stylesheet" href="/app.css" />
 </head>
 <body>
   <div class="chat-container">
     <div class="chat-header">
       <div class="avatar">K</div>
-      <div class="title">Klebão</div>
+      <div class="title">Klebao</div>
       <div class="header-actions"><button id="close">✖</button></div>
     </div>
 
@@ -18,7 +19,7 @@
     <div id="userArea">
       <div id="chat" class="chat-body">
         <div class="messages" id="messages">
-          <div class="welcome">Olá, Eu sou o Klebão<br><small>Por favor, realize o login no chat</small></div>
+          <div class="welcome">Ola, Eu sou o Klebao<br><small>Por favor, realize o login no chat</small></div>
         </div>
       </div>
 
@@ -45,7 +46,10 @@
         <div class="admin-conversation" id="adminConversation" style="display:none;">
           <div class="admin-conversation-header">
             <h3 style="margin:0">Conversa</h3>
-            <button id="adminBack" class="btn-send" style="padding:6px 10px">Voltar</button>
+            <div style="display:flex;gap:8px">
+              <button id="adminResolve" class="btn-send btn-resolve" style="padding:5px 10px;font-size:13px;background:#10b981">Resolvido</button>
+              <button id="adminBack" class="btn-send" style="padding:5px 10px;font-size:13px">Voltar</button>
+            </div>
           </div>
           <div class="admin-chat-body">
             <div id="adminMessages" class="messages admin-messages"></div>
@@ -58,7 +62,7 @@
       </div>
     </div>
 
-    <div class="footer-info">Atendimento automático para locadora de veículos — Klebão</div>
+    <div class="footer-info">Atendimento automatico para locadora de veiculos - Klebao</div>
   </div>
 
   <script src="/app.js"></script>
