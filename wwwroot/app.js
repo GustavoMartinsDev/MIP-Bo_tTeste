@@ -15,9 +15,41 @@ const adminConversation = document.getElementById('adminConversation');
 const adminBack = document.getElementById('adminBack');
 const closeBtn = document.getElementById('close');
 
-function createMessageEl(text, cls){
+function formatTime(dateString){
+  if(!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  } catch {
+    return '';
+  }
+}
+
+function createMessageEl(text, cls, sender, time){
   const wrapper = document.createElement('div');
   wrapper.className = 'message ' + cls;
+  
+  // Create header with sender and time
+  if(sender || time){
+    const header = document.createElement('div');
+    header.className = 'msg-header';
+    if(sender){
+      const senderEl = document.createElement('span');
+      senderEl.className = 'msg-sender';
+      senderEl.textContent = sender;
+      header.appendChild(senderEl);
+    }
+    if(time){
+      const timeEl = document.createElement('span');
+      timeEl.className = 'msg-time';
+      timeEl.textContent = time;
+      header.appendChild(timeEl);
+    }
+    wrapper.appendChild(header);
+  }
+  
   const p = document.createElement('div');
   p.textContent = text;
   p.style.whiteSpace = 'pre-wrap';
@@ -26,18 +58,21 @@ function createMessageEl(text, cls){
 }
 
 function appendUserMessage(text){
-  const el = createMessageEl(text, 'msg-user');
+  const now = formatTime(new Date().toISOString());
+  const el = createMessageEl(text, 'msg-user', 'Usuário', now);
   messagesEl.appendChild(el);
   chatBody.scrollTop = chatBody.scrollHeight;
 }
 function appendBotMessage(text){
-  const el = createMessageEl(text, 'msg-bot');
+  const now = formatTime(new Date().toISOString());
+  const el = createMessageEl(text, 'msg-bot', 'Klebão', now);
   messagesEl.appendChild(el);
   chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-function appendAdminMessage(text, fromUser=false){
-  const el = createMessageEl(text, fromUser ? 'msg-user' : 'msg-bot');
+function appendAdminMessage(text, sender, time){
+  const isUser = sender === 'Usuário';
+  const el = createMessageEl(text, isUser ? 'msg-user' : 'msg-bot', sender, time);
   adminMessages.appendChild(el);
   adminMessages.scrollTop = adminMessages.scrollHeight;
 }
@@ -63,10 +98,11 @@ async function fetchMessagesOnce(){
 }
 
 function normalizeMessage(m){
-  if(!m) return { from: '', text: '' };
+  if(!m) return { from: '', text: '', time: '' };
   const from = m.Remetente || m.remetente || m.from || '';
   const text = m.Conteudo || m.conteudo || m.content || m.Text || '';
-  return { from, text };
+  const time = formatTime(m.Horario || m.horario || m.time);
+  return { from, text, time };
 }
 
 async function pollMessages(){
@@ -78,7 +114,7 @@ async function pollMessages(){
   (data.messages || []).forEach(m => {
     const nm = normalizeMessage(m);
     const cls = nm.from === 'Usuário' ? 'msg-user' : 'msg-bot';
-    const el = createMessageEl(nm.text, cls);
+    const el = createMessageEl(nm.text, cls, nm.from, nm.time);
     messagesEl.appendChild(el);
   });
   if(atBottom) chatBody.scrollTop = chatBody.scrollHeight;
@@ -106,7 +142,23 @@ async function pollAdminQueue(adminSessionId){
   queueList.innerHTML = '';
   data.forEach(item => {
     const li = document.createElement('li');
-    li.textContent = `${item.email || item.sessionId} - ${item.priority}`;
+    
+    // Create structured queue item
+    const titulo = document.createElement('div');
+    titulo.className = 'queue-titulo';
+    titulo.textContent = item.titulo || 'Sem título';
+    
+    const prioridade = document.createElement('div');
+    prioridade.className = 'queue-prioridade';
+    prioridade.textContent = `Prioridade: ${item.priority}`;
+    
+    // Add priority badge class for styling
+    const priorityClass = item.priority === 'Alta' ? 'priority-high' : 
+                         item.priority === 'Média' ? 'priority-medium' : 'priority-low';
+    prioridade.classList.add(priorityClass);
+    
+    li.appendChild(titulo);
+    li.appendChild(prioridade);
     li.dataset.sessionId = item.sessionId;
     li.style.cursor = 'pointer';
     li.addEventListener('click', ()=> openConversation(adminSessionId, item.sessionId));
@@ -115,8 +167,12 @@ async function pollAdminQueue(adminSessionId){
 }
 
 async function openConversation(adminSessionId, targetSessionId){
+  console.log('Opening conversation:', targetSessionId);
+  
   // show conversation area and hide queue
-  adminConversation.style.display = 'block';
+  const convEl = document.getElementById('adminConversation');
+  console.log('Conversation element:', convEl);
+  convEl.style.display = 'flex';
   document.querySelector('.admin-queue').style.display = 'none';
 
   // mark active li
@@ -131,10 +187,17 @@ async function openConversation(adminSessionId, targetSessionId){
   adminMessages.innerHTML = '';
   data.forEach(m => {
     const nm = normalizeMessage(m);
-    appendAdminMessage(nm.text, nm.from === 'Usuário');
+    appendAdminMessage(nm.text, nm.from, nm.time);
   });
   // store current target
   adminArea.dataset.currentTarget = targetSessionId;
+
+  // Focus input field
+  const inputField = document.getElementById('adminMessageInput');
+  if(inputField) {
+    console.log('Input field found, focusing...');
+    setTimeout(() => inputField.focus(), 100);
+  }
 
   // start polling this conversation every 2s
   if(adminConvInterval) clearInterval(adminConvInterval);
@@ -142,7 +205,10 @@ async function openConversation(adminSessionId, targetSessionId){
     // reload conversation
     fetch(`/api/admin/conversation?adminSessionId=${adminSessionId}&targetSessionId=${targetSessionId}`).then(r=>r.json()).then(d=>{
       adminMessages.innerHTML = '';
-      d.forEach(m => { const nm = normalizeMessage(m); appendAdminMessage(nm.text, nm.from === 'Usuário'); });
+      d.forEach(m => { 
+        const nm = normalizeMessage(m); 
+        appendAdminMessage(nm.text, nm.from, nm.time); 
+      });
     }).catch(()=>{});
   },2000);
 }
@@ -154,7 +220,10 @@ async function adminSend(adminSessionId){
   const text = input.value.trim(); if(!text) return; input.value='';
   const body = { adminSessionId, targetSessionId: target, content: text };
   const resp = await fetch('/api/admin/send', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-  if(resp.ok){ appendAdminMessage(text, false); }
+  if(resp.ok){ 
+    const now = formatTime(new Date().toISOString());
+    appendAdminMessage(text, 'Atendente', now); 
+  }
 }
 
 // Login

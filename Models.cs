@@ -18,6 +18,7 @@ namespace TestePIM
         public Priority Priority { get; set; } = Priority.Invalid;
         public string? TempDetail { get; set; }
         public string? AssignedAgent { get; set; }
+        public string? ChamadoTitulo { get; set; }
     }
 
     public static class Utils
@@ -30,6 +31,17 @@ namespace TestePIM
             if (input == "2" || input.Contains("media") || input.Contains("média") || input.Contains("medium")) return Priority.Medium;
             if (input == "3" || input.Contains("baixa") || input.Contains("low")) return Priority.Low;
             return Priority.Invalid;
+        }
+
+        public static string PriorityToPortuguese(Priority priority)
+        {
+            return priority switch
+            {
+                Priority.High => "Alta",
+                Priority.Medium => "Média",
+                Priority.Low => "Baixa",
+                _ => "Não definida"
+            };
         }
     }
 }

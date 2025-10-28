@@ -130,6 +130,7 @@ async void HandleRequest(HttpListenerContext ctx)
                     // Medium or High -> enviar para fila humana, keep TempDetail for agent
                     state.IsWaitingHuman = true;
                     state.Priority = p;
+                    state.ChamadoTitulo = state.TempDetail?.Length > 50 ? state.TempDetail.Substring(0, 50) + "..." : state.TempDetail;
                     state.LastContext = "waiting_human";
                     queued = true;
                     resposta = new Mensagem { Remetente = "Klebão", Conteudo = "Obrigado — sua solicitação foi encaminhada para atendimento humano. Aguarde que um atendente irá falar com você em breve." };
@@ -246,9 +247,10 @@ async void HandleRequest(HttpListenerContext ctx)
             var list = sessions.Where(kv => kv.Value.IsWaitingHuman).Select(kv => new {
                 sessionId = kv.Key,
                 email = kv.Value.Email,
-                lastMessage = kv.Value.Conversa.Mensagens.LastOrDefault()?.Conteudo,
-                priority = kv.Value.Priority.ToString()
-            }).ToList();
+                titulo = kv.Value.ChamadoTitulo ?? (kv.Value.TempDetail?.Length > 50 ? kv.Value.TempDetail.Substring(0, 50) + "..." : kv.Value.TempDetail ?? "Sem título"),
+                priority = TestePIM.Utils.PriorityToPortuguese(kv.Value.Priority),
+                priorityLevel = (int)kv.Value.Priority
+            }).OrderBy(x => x.priorityLevel).ToList();
 
             await WriteJson(resp, 200, list);
             return;
